@@ -12,7 +12,7 @@ import datetime
 import config
 import psycopg2
 from psycopg2.extras import DictCursor
-from SQL_funcs import get_user, get_not_senders_by_hour, add_user, set_silence, shift_time_diff, add_sender
+from SQL_funcs import get_user, get_not_senders_by_hour, add_user, set_silence, shift_time_diff, add_sender, senders_reset, get_not_senders
 from config import  city_callback_to_city, city_to_time, time_callback_to_offset
 from registration import register
 
@@ -154,10 +154,21 @@ def buttons_func(bot : Bot, event : Event):
         pass
 
 
+def send_report():
+    week_day = datetime.datetime.now().weekday()
+    if (week_day < 5):
+        bot = Bot(token=TOKEN)
+        users = get_not_senders()
+        msg_text = 'Пользователи, не сообщившие о месте работы сегодня:\n'
+        for user in users:
+            msg_text += user['NAME'] + '\n'
+        bot.send_text(text=msg_text, chat_id=config.BOSS_ID)
 
 def start_schedule():
     print ("Schedule started")
     every().hour.at(":00").do(daily_question)
+    every().day.at("00:00").do(senders_reset)
+    every().day.at("13:00").do(senders_reset)
     while (True):
         schedule.run_pending()
         time.sleep(1)

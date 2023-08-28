@@ -47,6 +47,11 @@ def get_not_senders_by_hour(time):
                       f'and u."TEAMS_ID" not in (select "TEAMS_ID" from secretary."TS_SENDERS" s)', (time,))
     #return ['adyevdv@sovcombank.ru']
 
+def get_not_senders():
+    return SQL_Select(f'SELECT *' 
+                      f'FROM secretary."TS_USERS" u '
+                      f'where 1=1 '
+                      f'and u."TEAMS_ID" not in (select "TEAMS_ID" from secretary."TS_SENDERS" s)', ())
 
 def add_user(name, chat_id, diff, city):
    
@@ -62,3 +67,6 @@ def shift_time_diff (user_id, new_time_diff):
 
 def add_sender (user_id):
     SQL_Update('INSERT INTO "secretary"."TS_SENDERS" ("TEAMS_ID") VALUES (%s);', (user_id,))
+
+def senders_reset():
+    SQL_Update('delete from "secretary"."TS_SENDERS"', ())
