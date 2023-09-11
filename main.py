@@ -91,7 +91,9 @@ def send_choice_in_chat(bot: Bot, place: str, event: Event):
     add_sender(user_id=event.from_chat)
 
 
+
 def buttons_func(bot : Bot, event : Event):
+    print (event)
     #Запросить выбор места работы
     if (event.data['callbackData'] == 'call_back_workplace'):
        send_workplace_choice(bot=bot, chat_id=event.from_chat) 
@@ -99,22 +101,31 @@ def buttons_func(bot : Bot, event : Event):
     #Выбрал в офисе
     if (event.data['callbackData'] == 'call_back_office'):       
         send_choice_in_chat(bot=bot, place='💼 Офис', event=event)
+        bot.send_text(text='Сообщение отправлено в чат!', chat_id=event.from_chat)
+        
     
     #Выбрал из дома
     if (event.data['callbackData'] == 'call_back_home'):       
         send_choice_in_chat(bot=bot, place='🏡 Из дома', event=event)
+        bot.send_text(text='Сообщение отправлено в чат!', chat_id=event.from_chat)
 
     #Кнопка on/off
     if (event.data['callbackData'] == 'call_back_silenced_switch'):
         user = get_user(user_id=event.from_chat)
         print (f'chat ID: {event.from_chat}\n')
-
+        new_buttons = [[
+            {"text":"💻 Выбрать место работы", "callbackData":"call_back_workplace", "style": "primary"}
+        ]]
         if (user['SILENCED']):
             set_silence(user_id=event.from_chat, value=False)
-            bot.send_text('Рассылка включена!', event.from_chat)
+            bot.send_text(text='Рассылка включена!', chat_id=event.from_chat)
+            new_buttons[0].append({"text": '🚫 Выключить', "callbackData":"call_back_silenced_switch", "style": "primary"})
         else:
             set_silence(user_id=event.from_chat, value=True)
-            bot.send_text('Рассылка отключена!', event.from_chat)
+            bot.send_text(text='Рассылка отключена!', chat_id=event.from_chat)
+            new_buttons[0].append({"text": '✅ Включить', "callbackData":"call_back_silenced_switch", "style": "primary"})
+        bot.edit_text(inline_keyboard_markup=new_buttons, msg_id=event.data['message']['msgId'], chat_id=event.from_chat, text='Что хочешь сделать?')
+        #print(event.data['message']['msgId'])
      
     #Выбор города во время регистрации
     if (event.data['callbackData'] in ['call_back_city_NSK', 'call_back_city_HBR', 'call_back_city_SRT', 'call_back_city_MSK']): 
@@ -168,7 +179,7 @@ def start_schedule():
     print ("Schedule started")
     every().hour.at(":00").do(daily_question)
     every().day.at("00:00").do(senders_reset)
-    every().day.at("13:00").do(senders_reset)
+    every().day.at("13:00").do(send_report)
     while (True):
         schedule.run_pending()
         time.sleep(1)
@@ -178,12 +189,12 @@ def daily_question():
     bot = Bot(token=TOKEN)
     hour = datetime.datetime.now().hour
     week_day = datetime.datetime.now().weekday()
-    print (f'weekday: {week_day}')
     if (week_day < 5):
         users = get_not_senders_by_hour(16 - hour)
         print(users)
         for user in users:
-            send_workplace_choice(bot=bot, chat_id=user['TEAMS_ID'])
+            if(not user['SILENCED']):
+                send_workplace_choice(bot=bot, chat_id=user['TEAMS_ID'])
     
 
 #------------------------------------------------------------------------------------------------
