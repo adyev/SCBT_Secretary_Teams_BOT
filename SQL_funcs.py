@@ -55,8 +55,8 @@ def get_not_senders():
 
 def add_user(name, chat_id, diff, city):
    
-    SQL_Update('INSERT INTO "secretary"."TS_USERS" ("TEAMS_ID", "NAME", "UTC_DIFF", "CITY") VALUES (%s, %s, %s, %s);',
-                (chat_id, name, diff, city))
+    SQL_Update('INSERT INTO "secretary"."TS_USERS" ("TEAMS_ID", "NAME", "UTC_DIFF", "CITY", "GROOP") VALUES (%s, %s, %s, %s, %s);',
+                (chat_id, name, diff, city, "SaA"))
     
 
 def set_silence(user_id, value):

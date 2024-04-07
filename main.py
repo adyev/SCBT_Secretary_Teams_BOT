@@ -8,6 +8,7 @@ from schedule import every
 import time
 from multiprocessing import Process
 import multiprocessing as mp
+from threading import Thread
 import datetime
 import config
 import psycopg2
@@ -19,6 +20,7 @@ from registration import register
 
 TOKEN = config.SKBT_SECRETARY_TOKEN #your token here
 CHAT_ID = config.SKB_CHAT_ID
+SAA_CHAT_ID = '110869@chat.agent'
 #CHAT_ID = '83665@chat.agent' #тестовый
 
 
@@ -44,13 +46,21 @@ def send_menu(bot : Bot, user_id : str):
 
 
 def send_workplace_choice(bot: Bot, chat_id: str):
-    bot.send_text(chat_id=chat_id, text="Где сегодня работаешь?", inline_keyboard_markup="{}".format(json.dumps([[
-            {"text":"💼 Офис", "callbackData":"call_back_office", "style": "primary"},
-            {"text":"🏡 Из дома", "callbackData":"call_back_home", "style": "primary"}
-        ]])))
+    user_groop = get_user(user_id=chat_id)['GROOP']
+    if (user_groop == 'RPI'):
+        bot.send_text(chat_id=chat_id, text="Где сегодня работаешь?", inline_keyboard_markup="{}".format(json.dumps([[
+                {"text":"💼 Офис", "callbackData":"call_back_office", "style": "primary"},
+                {"text":"🏡 Из дома", "callbackData":"call_back_home", "style": "primary"}
+            ]])))
+    else:
+        bot.send_text(chat_id=chat_id, text="Где сегодня работаешь?", inline_keyboard_markup="{}".format(json.dumps([[
+                {"text":"💼 Офис", "callbackData":"call_back_office", "style": "primary"},
+                {"text":"🏡 Из дома", "callbackData":"call_back_home", "style": "primary"},
+                {"text":"🌚 На луне", "callbackData":"call_back_moon", "style": "primary"}
+            ]])))
 
 def message_check(bot : Bot, event : Event):
-    commands_list = ['/menu', '/help', '/start', '/setWorkTime', '/gimmeChatId'] 
+    commands_list = ['/menu', '/help', '/start', '/setWorkTime', '/gimmeChatId', '/report'] 
     if (event.text in commands_list):
         if(event.text =='/gimmeChatId'):
             print (event.from_chat)
@@ -62,6 +72,8 @@ def message_check(bot : Bot, event : Event):
                 register(bot=bot, event=event)
             if(event.text =='/setWorkTime'):
                 send_time_shift_choice(bot=bot, event=event)
+            if(event.text == '/report'):
+                send_report()
             
         
         else:
@@ -85,9 +97,13 @@ def send_time_shift_choice(bot: Bot, event: Event):
 
 def send_choice_in_chat(bot: Bot, place: str, event: Event):
     date = datetime.datetime.now().strftime("%d.%m.%Y")
+    user = get_user(user_id=event.from_chat)
     print('Имя\nДата ' + place + ' #работа')
     sender = " ".join([event.data['from']['lastName'], event.data['from']['firstName']])
-    bot.send_text(text=f'{sender}\n{date} ' + place + ' #работа', chat_id=CHAT_ID)
+    if (user['GROOP'] == 'RPI'):
+        bot.send_text(text=f'#{sender}\n{date} ' + place + ' #работа', chat_id=CHAT_ID)
+    else:
+        bot.send_text(text=f'#{sender}\n{date} ' + place + ' #работа', chat_id=SAA_CHAT_ID)
     add_sender(user_id=event.from_chat)
 
 
@@ -107,6 +123,11 @@ def buttons_func(bot : Bot, event : Event):
     #Выбрал из дома
     if (event.data['callbackData'] == 'call_back_home'):       
         send_choice_in_chat(bot=bot, place='🏡 Из дома', event=event)
+        bot.send_text(text='Сообщение отправлено в чат!', chat_id=event.from_chat)
+
+    #Выбрал на Луне
+    if (event.data['callbackData'] == 'call_back_moon'):       
+        send_choice_in_chat(bot=bot, place='🌚 На луне', event=event)
         bot.send_text(text='Сообщение отправлено в чат!', chat_id=event.from_chat)
 
     #Кнопка on/off
@@ -170,10 +191,17 @@ def send_report():
     if (week_day < 5):
         bot = Bot(token=TOKEN)
         users = get_not_senders()
-        msg_text = 'Пользователи, не сообщившие о месте работы сегодня:\n'
+        msg_SaA_text = '#REPORT\nПользователи, не сообщившие о месте работы сегодня:\n'
+        msg_RPI_text = '#REPORT\nПользователи, не сообщившие о месте работы сегодня:\n'
         for user in users:
-            msg_text += user['NAME'] + '\n'
-        bot.send_text(text=msg_text, chat_id=config.BOSS_ID)
+            if (user['TEAMS_ID'] != config.BOSS_ID):
+                if user['GROOP'] == 'SaA':
+                    msg_SaA_text += user['NAME'] + '\n'
+                else:
+                    msg_RPI_text += user['NAME'] + '\n'
+        bot.send_text(text=msg_RPI_text, chat_id=CHAT_ID)
+        bot.send_text(text=msg_SaA_text, chat_id=SAA_CHAT_ID)
+
 
 def start_schedule():
     print ("Schedule started")
@@ -203,10 +231,11 @@ def daily_question():
 
 def main():
     bot = Bot(token=TOKEN)
+    print (bot)
     bot.dispatcher.add_handler(MessageHandler(callback=message_check))
     bot.dispatcher.add_handler(BotButtonCommandHandler(callback=buttons_func))
-    p = Process(target = start_schedule)
-    p.start()
+    thread = Thread(target=start_schedule)
+    thread.start()
     bot.start_polling()
     bot.idle()
 
