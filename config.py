@@ -1,9 +1,11 @@
 SKB_CHAT_ID = '638@chat.agent' #рабочий 
+#тестовый
+#SKB_CHAT_ID = '83665@chat.agent'
 SKBT_SECRETARY_TOKEN = "001.0309258019.1441521491:1000000101"
 BOSS_ID = 'kapustinao@sovcombank.ru'
 #BOSS_ID = 'adyevdv@sovcombank.ru'
 
-DB_NAME = 'TaskManager'
+DB_NAME = 'postgres'
 DB_USER = 'postgres'
 DB_PASSWORD = '183492'
 DB_HOST = 'localhost'
